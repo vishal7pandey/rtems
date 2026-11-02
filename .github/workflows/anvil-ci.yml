@@ -60,6 +60,7 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
+          export DEBIAN_FRONTEND=noninteractive
           apt-get update
           apt-get install -y --no-install-recommends ca-certificates curl xz-utils
           node_version=24.22.2
@@ -122,6 +123,7 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
+          export DEBIAN_FRONTEND=noninteractive
           apt-get update
           apt-get install -y --no-install-recommends ca-certificates curl openjdk-17-jre-headless xz-utils
           node_version=24.22.2
