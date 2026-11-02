@@ -62,7 +62,7 @@ jobs:
           set -Eeuo pipefail
           apt-get update
           apt-get install -y --no-install-recommends ca-certificates curl xz-utils
-          node_version=24.11.0
+          node_version=24.22.2
           node_archive="node-v${node_version}-linux-x64.tar.xz"
           node_url="https://nodejs.org/dist/v${node_version}"
           curl -fsSL "${node_url}/${node_archive}" -o "/tmp/${node_archive}"
@@ -124,7 +124,7 @@ jobs:
           set -Eeuo pipefail
           apt-get update
           apt-get install -y --no-install-recommends ca-certificates curl openjdk-17-jre-headless xz-utils
-          node_version=24.11.0
+          node_version=24.22.2
           node_archive="node-v${node_version}-linux-x64.tar.xz"
           node_url="https://nodejs.org/dist/v${node_version}"
           curl -fsSL "${node_url}/${node_archive}" -o "/tmp/${node_archive}"
