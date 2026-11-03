@@ -1,0 +1,160 @@
+name: RTEMS CI
+
+on:
+  pull_request:
+    branches: [main, tc1/5776-base]
+  push:
+    branches: [main, tc1/5776-base]
+  workflow_dispatch:
+
+concurrency:
+  group: rtems-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    name: build-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Run erc32 build and SIS tests
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          mkdir -p logs
+          docker run --rm \
+            --volume "$GITHUB_WORKSPACE:/workspace" \
+            --workdir /workspace \
+            --env RUN_TESTS=1 \
+            ghcr.io/vishal7pandey/anvil-sandbox-rtems:7 \
+            bash .github/scripts/build-erc32.sh 2>&1 | tee logs/build-test.log
+
+      - name: Upload build and test logs
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: erc32-build-test-logs
+          path: logs/
+          if-no-files-found: warn
+          retention-days: 14
+
+  codeql:
+    name: CodeQL (C/C++)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    container:
+      image: ghcr.io/vishal7pandey/anvil-sandbox-rtems:7
+      options: --user 0 --cap-add=SYS_PTRACE
+    steps:
+      - name: Install GitHub Action runtime
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates curl xz-utils
+          node_version=24.22.2
+          node_archive="node-v${node_version}-linux-x64.tar.xz"
+          node_url="https://nodejs.org/dist/v${node_version}"
+          curl -fsSL "${node_url}/${node_archive}" -o "/tmp/${node_archive}"
+          curl -fsSL "${node_url}/SHASUMS256.txt" -o /tmp/SHASUMS256.txt
+          grep "  ${node_archive}$" /tmp/SHASUMS256.txt | (cd /tmp && sha256sum --check --status)
+          tar -xJf "/tmp/${node_archive}" --strip-components=1 -C /usr/local
+          node --version
+
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: c-cpp
+          build-mode: manual
+
+      - name: Build erc32 for CodeQL
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          set -x
+          CODEQL_BUILD=1 bash .github/scripts/build-erc32.sh
+
+      - name: Analyze
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:c-cpp
+
+  sonar:
+    name: SonarCloud
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    container:
+      image: ghcr.io/vishal7pandey/anvil-sandbox-rtems:7
+      options: --user 0 --cap-add=SYS_PTRACE
+    steps:
+      - name: Check SonarCloud setup
+        id: sonar_guard
+        shell: bash
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+        run: |
+          if [[ -z "${SONAR_TOKEN:-}" ]]; then
+            echo 'enabled=false' >> "$GITHUB_OUTPUT"
+            echo 'SonarCloud scan skipped: SONAR_TOKEN is not configured.' >> "$GITHUB_STEP_SUMMARY"
+          elif [[ "$GITHUB_EVENT_NAME" == 'pull_request' && "$SONAR_PR_HEAD_REPO" != "$GITHUB_REPOSITORY" ]]; then
+            echo 'enabled=false' >> "$GITHUB_OUTPUT"
+            echo 'SonarCloud scan skipped: fork pull requests cannot use repository secrets.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'enabled=true' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install scan dependencies
+        if: steps.sonar_guard.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates curl openjdk-17-jre-headless unzip xz-utils
+          node_version=24.22.2
+          node_archive="node-v${node_version}-linux-x64.tar.xz"
+          node_url="https://nodejs.org/dist/v${node_version}"
+          curl -fsSL "${node_url}/${node_archive}" -o "/tmp/${node_archive}"
+          curl -fsSL "${node_url}/SHASUMS256.txt" -o /tmp/SHASUMS256.txt
+          grep "  ${node_archive}$" /tmp/SHASUMS256.txt | (cd /tmp && sha256sum --check --status)
+          tar -xJf "/tmp/${node_archive}" --strip-components=1 -C /usr/local
+          apt-get install -y --no-install-recommends bear
+          node --version
+          java -version
+
+      - name: Check out source
+        if: steps.sonar_guard.outputs.enabled == 'true'
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Build erc32 and capture compile commands
+        if: steps.sonar_guard.outputs.enabled == 'true'
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          chown -R agent:agent "$GITHUB_WORKSPACE"
+          su -p agent -s /bin/bash -c 'COMPILE_DATABASE=1 bash .github/scripts/build-erc32.sh'
+
+      - name: Analyze with SonarCloud
+        if: steps.sonar_guard.outputs.enabled == 'true'
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: -Dsonar.qualitygate.wait=true
