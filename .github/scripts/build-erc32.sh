@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-cat > config.ini <<'EOF'
+build_psxtests=True
+build_samples=True
+if [[ "${CODEQL_BUILD:-0}" == "1" ]]; then
+  build_psxtests=False
+  build_samples=False
+fi
+
+cat > config.ini <<EOF
 [sparc/erc32]
 BUILD_TESTS = False
-BUILD_PSXTESTS = True
-BUILD_SAMPLES = True
+BUILD_PSXTESTS = ${build_psxtests}
+BUILD_SAMPLES = ${build_samples}
 EOF
 
 ./waf configure \
@@ -15,6 +22,8 @@ EOF
 
 if [[ "${COMPILE_DATABASE:-0}" == "1" ]]; then
   bear --output build/compile_commands.json -- ./waf -j"$(nproc)"
+elif [[ "${CODEQL_BUILD:-0}" == "1" ]]; then
+  ./waf -v -j1
 else
   ./waf -j"$(nproc)"
 fi
