@@ -125,7 +125,7 @@ jobs:
           set -Eeuo pipefail
           export DEBIAN_FRONTEND=noninteractive
           apt-get update
-          apt-get install -y --no-install-recommends ca-certificates curl openjdk-17-jre-headless xz-utils
+          apt-get install -y --no-install-recommends ca-certificates curl openjdk-17-jre-headless unzip xz-utils
           node_version=24.22.2
           node_archive="node-v${node_version}-linux-x64.tar.xz"
           node_url="https://nodejs.org/dist/v${node_version}"
