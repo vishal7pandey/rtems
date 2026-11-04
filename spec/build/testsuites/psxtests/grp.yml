@@ -186,6 +186,8 @@ links:
 - role: build-dependency
   uid: psxmutexattr01
 - role: build-dependency
+  uid: psxmutexceil01
+- role: build-dependency
   uid: psxndbm01
 - role: build-dependency
   uid: psxobj01
