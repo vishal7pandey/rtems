@@ -2,9 +2,9 @@ name: RTEMS CI
 
 on:
   pull_request:
-    branches: [main, tc1/5776-base]
+    branches: [main, 'tc1/**', 'case/**']
   push:
-    branches: [main, tc1/5776-base]
+    branches: [main, 'tc1/**', 'case/**']
   workflow_dispatch:
 
 concurrency:
