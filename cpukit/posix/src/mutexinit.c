@@ -173,6 +173,7 @@ int pthread_mutex_init(
 
   the_mutex = _POSIX_Mutex_Get( mutex );
 
+  /* Compute flags locally; do not modify the object until after validation. */
   flags = (uintptr_t) the_mutex ^ POSIX_MUTEX_MAGIC;
   flags &= ~POSIX_MUTEX_FLAGS_MASK;
   flags |= protocol;
@@ -180,8 +181,6 @@ int pthread_mutex_init(
   if ( the_attr->type == PTHREAD_MUTEX_RECURSIVE ) {
     flags |= POSIX_MUTEX_RECURSIVE;
   }
-
-  the_mutex->flags = flags;
 
   if ( protocol == POSIX_MUTEX_PRIORITY_CEILING ) {
     int  prio_ceiling;
@@ -202,6 +201,9 @@ int pthread_mutex_init(
     priority = 0;
     scheduler = NULL;
   }
+
+  /* Validation succeeded; now write the state to the object. */
+  the_mutex->flags = flags;
 
   _Thread_queue_Queue_initialize(
     &the_mutex->Recursive.Mutex.Queue.Queue,
