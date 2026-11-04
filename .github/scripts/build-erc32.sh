@@ -2,9 +2,12 @@
 set -Eeuo pipefail
 
 build_psxtests=True
+# Classic API suite: bug-replay cases put regression tests in sptests too (ANVIL-42).
+build_sptests=True
 build_samples=True
 if [[ "${CODEQL_BUILD:-0}" == "1" ]]; then
   build_psxtests=False
+  build_sptests=False
   build_samples=False
 fi
 
@@ -12,6 +15,7 @@ cat > config.ini <<EOF
 [sparc/erc32]
 BUILD_TESTS = False
 BUILD_PSXTESTS = ${build_psxtests}
+BUILD_SPTESTS = ${build_sptests}
 BUILD_SAMPLES = ${build_samples}
 EOF
 
