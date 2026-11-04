@@ -181,7 +181,7 @@ int pthread_mutex_init(
     flags |= POSIX_MUTEX_RECURSIVE;
   }
 
-  the_mutex->flags = flags;
+  /* Do not publish the flags until validation and initialization succeed */
 
   if ( protocol == POSIX_MUTEX_PRIORITY_CEILING ) {
     int  prio_ceiling;
@@ -210,5 +210,8 @@ int pthread_mutex_init(
   the_mutex->Recursive.nest_level = 0;
   _Priority_Node_initialize( &the_mutex->Priority_ceiling, priority );
   the_mutex->scheduler = scheduler;
+
+  /* Now make the mutex visible as initialized */
+  the_mutex->flags = flags;
   return 0;
 }
