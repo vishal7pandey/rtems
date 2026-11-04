@@ -1,8 +1,7 @@
 name: RTEMS CI
 
 on:
-  pull_request:
-    branches: [main, 'tc1/**', 'case/**']
+  pull_request:  # every PR, whatever its base: a case base branch must never lack CI
   push:
     branches: [main, 'tc1/**', 'case/**']
   workflow_dispatch:
