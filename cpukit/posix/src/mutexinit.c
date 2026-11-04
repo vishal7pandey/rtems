@@ -173,15 +173,16 @@ int pthread_mutex_init(
 
   the_mutex = _POSIX_Mutex_Get( mutex );
 
+  /* Build flags locally; do not write to the mutex until validation passes */
   flags = (uintptr_t) the_mutex ^ POSIX_MUTEX_MAGIC;
   flags &= ~POSIX_MUTEX_FLAGS_MASK;
   flags |= protocol;
 
+#if defined( _UNIX98_THREAD_MUTEX_ATTRIBUTES )
   if ( the_attr->type == PTHREAD_MUTEX_RECURSIVE ) {
     flags |= POSIX_MUTEX_RECURSIVE;
   }
-
-  the_mutex->flags = flags;
+#endif
 
   if ( protocol == POSIX_MUTEX_PRIORITY_CEILING ) {
     int  prio_ceiling;
@@ -210,5 +211,6 @@ int pthread_mutex_init(
   the_mutex->Recursive.nest_level = 0;
   _Priority_Node_initialize( &the_mutex->Priority_ceiling, priority );
   the_mutex->scheduler = scheduler;
+  the_mutex->flags = flags;
   return 0;
 }

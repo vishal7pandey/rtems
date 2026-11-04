@@ -688,6 +688,15 @@ void *POSIX_Init( void *argument )
   status = pthread_mutex_init( &Mutex_id, &attr );
   rtems_test_assert( status == EINVAL );
 
+  /* After failed init, subsequent operations must reject the object */
+  puts( "Init: pthread_mutex_trylock - EINVAL (after failed init)" );
+  status = pthread_mutex_trylock( &Mutex_id );
+  rtems_test_assert( status == EINVAL );
+
+  puts( "Init: pthread_mutex_destroy - EINVAL (after failed init)" );
+  status = pthread_mutex_destroy( &Mutex_id );
+  rtems_test_assert( status == EINVAL );
+
   /* must get around various error checks before checking bad scope */
   puts( "Init: Resetting mutex attributes" );
   status = pthread_mutexattr_init( &attr );
