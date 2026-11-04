@@ -181,8 +181,6 @@ int pthread_mutex_init(
     flags |= POSIX_MUTEX_RECURSIVE;
   }
 
-  the_mutex->flags = flags;
-
   if ( protocol == POSIX_MUTEX_PRIORITY_CEILING ) {
     int  prio_ceiling;
     bool valid;
@@ -210,5 +208,6 @@ int pthread_mutex_init(
   the_mutex->Recursive.nest_level = 0;
   _Priority_Node_initialize( &the_mutex->Priority_ceiling, priority );
   the_mutex->scheduler = scheduler;
+  the_mutex->flags = flags;
   return 0;
 }
